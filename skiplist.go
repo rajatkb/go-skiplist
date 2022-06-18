@@ -71,6 +71,8 @@ func (list *SkipList) traverseList(returnPath bool, shortCircuit bool, key int64
 		// 	return fmt.Errorf("Broken list , exploring height greater then current nodes height"), false
 		// }
 
+		// since operation is done in the nextPointer list
+		// we create a temp node and keep changing it's skip pointer
 		tempDataNode.skipNodesNext = skipPointerList
 
 		currentNode = tempDataNode // temp extra node for start
