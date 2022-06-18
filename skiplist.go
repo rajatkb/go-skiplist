@@ -50,16 +50,20 @@ func (list SkipList) getRandomLevel() int8 {
 	- useful for insertion
 	- useful for deletion
 */
-func (list *SkipList) traverseList(returnPath bool, shortCircuit bool, key int64, call func(*DataNode, int)) (*[]*DataNode, *DataNode) {
+func (list *SkipList) traverseList(returnPath bool, shortCircuit bool, key int64, call func(*DataNode, int)) (*[]*[]*DataNode, *DataNode) {
 	currentExploringHeight := int(list.currentHeight - 1)
 	var currentNode *DataNode
 
 	skipPointerList := &list.headList
 
-	var pendingOperations []*DataNode = nil
+	var pendingOperations []*([]*DataNode) = nil
 
 	if returnPath {
-		pendingOperations = make([]*DataNode, list.currentHeight)
+		pendingOperations = make([]*([]*DataNode), list.currentHeight)
+	}
+
+	tempDataNode := &DataNode{
+		skipNodesNext: skipPointerList,
 	}
 
 	for currentExploringHeight != -1 {
@@ -67,9 +71,8 @@ func (list *SkipList) traverseList(returnPath bool, shortCircuit bool, key int64
 		// 	return fmt.Errorf("Broken list , exploring height greater then current nodes height"), false
 		// }
 
-		tempDataNode := &DataNode{
-			skipNodesNext: skipPointerList,
-		}
+		tempDataNode.skipNodesNext = skipPointerList
+
 		currentNode = tempDataNode // temp extra node for start
 
 		for currentNode.getNext(currentExploringHeight) != nil && currentNode.getNext(currentExploringHeight).key < key { // is next node lesser than key
@@ -80,7 +83,7 @@ func (list *SkipList) traverseList(returnPath bool, shortCircuit bool, key int64
 			return nil, currentNode.getNext(currentExploringHeight)
 		}
 		if returnPath {
-			pendingOperations[currentExploringHeight] = currentNode
+			pendingOperations[currentExploringHeight] = skipPointerList
 		}
 
 		call(currentNode, currentExploringHeight)
@@ -105,14 +108,18 @@ func (list *SkipList) Delete(key int64) bool {
 	pendingOperations, currentNode := list.traverseList(true, false, key, empytyFunc)
 
 	if currentNode.getNext(0) != nil && currentNode.getNext(0).key == key {
-
+		tempNode := &DataNode{}
 		for i := int(list.currentHeight) - 1; i >= 0; i-- {
-			currentNode := (*pendingOperations)[i]
-			if currentNode != nil && currentNode.getNext(i) != nil && currentNode.getNext(i).supportLevel(i) {
-				if currentNode.getNext(i).supportLevel(i) {
-					currentNode.setNext(i, currentNode.getNext(i).getNext(i))
-				} else {
-					currentNode.setNext(i, nil)
+
+			if pendingOperations != nil {
+				tempNode.skipNodesNext = (*pendingOperations)[i]
+				currentNode := tempNode
+				if currentNode.getNext(i) != nil && currentNode.getNext(i).supportLevel(i) {
+					if currentNode.getNext(i).supportLevel(i) {
+						currentNode.setNext(i, currentNode.getNext(i).getNext(i))
+					} else {
+						currentNode.setNext(i, nil)
+					}
 				}
 			}
 		}

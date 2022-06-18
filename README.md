@@ -43,16 +43,18 @@ of total entries
 
 ```
 -------------Time benchamrk for Insertion against map----------
-Time taken for SkipList: 465 , height : 16 
-Time taken for Map : 71
-Operation per mili second SkipList : 193 o/ms
-Operation per mili second HashMap : 1267 o/ms
---- PASS: TestCompareInsert (0.54s)
+Time taken for SkipList: 291 , height : 16 
+Time taken for Map : 64
+Operation per mili second SkipList : 309 o/ms
+Operation per mili second HashMap : 1406 o/ms
+--- PASS: TestCompareInsert (0.35s)
 === RUN   TestCompareSearch
 -------------Time benchamrk for Search against map----------
-Time taken for SkipList: 63  height 16 , 
-Time taken for Map : 10
-Operation per mili second SkipList : 1428 o/ms
-Operation per mili second HashMap : 9000 o/ms
---- PASS: TestCompareSearch (0.52s)
+Time taken for SkipList: 41  height 16 , 
+Time taken for Map : 1
+Operation per mili second SkipList : 2195 o/ms
+Operation per mili second HashMap : 90000 o/ms
+--- PASS: TestCompareSearch (0.37s)
+PASS
 ```
+
