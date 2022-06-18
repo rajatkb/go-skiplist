@@ -57,3 +57,7 @@ Operation per mili second HashMap : 8181 o/ms
 --- PASS: TestCompareSearch (0.41s)
 ```
 
+## TODO
+
+- Investigate improvement for search and insert
+- Look into Compare and Swap implementation for SkipList , incorporate the same for thread safe version
