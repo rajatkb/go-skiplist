@@ -9,11 +9,12 @@ import (
 type DataNode struct {
 	key           int64
 	data          []byte
+	maxLevel      int8
 	skipNodesNext *[]*DataNode
 }
 
 func (node DataNode) supportLevel(level int) bool {
-	return len(*node.skipNodesNext) > level
+	return int(node.maxLevel) > level
 }
 
 func (node DataNode) getNext(level int) *DataNode {
@@ -144,6 +145,7 @@ func (list *SkipList) Insert(key int64, value []byte) *DataNode {
 		newNode := &DataNode{
 			key:           key,
 			data:          value,
+			maxLevel:      level,
 			skipNodesNext: &arr,
 		}
 
@@ -159,6 +161,7 @@ func (list *SkipList) Insert(key int64, value []byte) *DataNode {
 		key:           key,
 		data:          value,
 		skipNodesNext: &arr,
+		maxLevel:      level,
 	}
 
 	list.traverseList(false, false, key, func(currentNode *DataNode, currentHeight int) {
