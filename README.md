@@ -25,9 +25,9 @@ In case you plan on using the API. 😵
 - Iterate
 ```go
     for pair := range list.Iterate() {
-		pair.key 
+	pair.key 
         pair.value
-	}
+    }
 ```
 - IsEmpty
 
