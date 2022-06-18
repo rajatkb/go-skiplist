@@ -2,6 +2,7 @@ package goskiplist
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 	"testing"
 	"time"
@@ -31,8 +32,9 @@ func getElapsed(call func()) int64 {
 }
 
 func TestInsert(t *testing.T) {
-	list := CreateSkipList(5)
+
 	total := 30000
+	list := CreateSkipList(int8(math.Log2(float64(total))))
 	for num := range generateRandomNumber(0, 100, total) {
 		list.Insert(int64(num), []byte(fmt.Sprintf("value - %d", num)))
 	}
@@ -46,8 +48,9 @@ func TestInsert(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	list := CreateSkipList(5)
+
 	total := 30000
+	list := CreateSkipList(int8(math.Log2(float64(total))))
 	for num := range generateRandomNumber(0, 100, total) {
 		list.Insert(int64(num), []byte(fmt.Sprintf("value - %d", num)))
 		list.Delete(int64(num))
@@ -59,8 +62,8 @@ func TestDelete(t *testing.T) {
 }
 
 func TestSearch(t *testing.T) {
-	list := CreateSkipList(5)
 	total := 30000
+	list := CreateSkipList(int8(math.Log2(float64(total))))
 	for num := range generateRandomNumber(200, 300, total) {
 		list.Insert(int64(num), []byte(fmt.Sprintf("value - %d", num)))
 
@@ -74,9 +77,10 @@ func TestSearch(t *testing.T) {
 }
 
 func TestCompareInsert(t *testing.T) {
-	list := CreateSkipList(5)
+
 	hashMap := make(map[int64][]byte)
 	total := 90000
+	list := CreateSkipList(int8(math.Log2(float64(total))))
 	timeForList := getElapsed(func() {
 		for num := range generateRandomNumber(200, 300, total) {
 			list.Insert(int64(num), []byte(fmt.Sprintf("value - %d", num)))
@@ -89,7 +93,7 @@ func TestCompareInsert(t *testing.T) {
 		}
 	})
 	fmt.Printf("-------------Time benchamrk for Insertion against map----------\n")
-	fmt.Printf("Time taken for SkipList: %d \n", timeForList)
+	fmt.Printf("Time taken for SkipList: %d , height : %d \n", timeForList, list.currentHeight)
 	fmt.Printf("Time taken for Map : %d \n", timeForMap)
 	fmt.Printf("Operation per mili second SkipList : %d o/ms \n", int64(total)/timeForList)
 	fmt.Printf("Operation per mili second HashMap : %d o/ms \n", int64(total)/timeForMap)
@@ -97,9 +101,10 @@ func TestCompareInsert(t *testing.T) {
 }
 
 func TestCompareSearch(t *testing.T) {
-	list := CreateSkipList(5)
+
 	hashMap := make(map[int64][]byte)
 	total := 90000
+	list := CreateSkipList(int8(math.Log2(float64(total))))
 	numbers := make([]int, total)
 	i := 0
 	for num := range generateRandomNumber(200, 300, total) {
@@ -126,7 +131,7 @@ func TestCompareSearch(t *testing.T) {
 	}
 
 	fmt.Printf("-------------Time benchamrk for Search against map----------\n")
-	fmt.Printf("Time taken for SkipList: %d \n", timeForList)
+	fmt.Printf("Time taken for SkipList: %d  height %d , \n", timeForList, list.currentHeight)
 	fmt.Printf("Time taken for Map : %d \n", timeForMap)
 	fmt.Printf("Operation per mili second SkipList : %d o/ms \n", int64(total)/(timeForList))
 	fmt.Printf("Operation per mili second HashMap : %d o/ms \n", int64(total)/timeForMap)
