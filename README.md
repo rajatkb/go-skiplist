@@ -39,22 +39,19 @@ In case you plan on using the API. 😵
 ## Test
 
 It's slow. Painfully slow. But it's ordered 🤣. Benchmarks based on logarithmic height
-of total entries
+of total entries. Posted results are the best of 5 consequtive runs.
 
 ```
 -------------Time benchamrk for Insertion against map----------
-Time taken for SkipList: 321 , height : 16 
-Time taken for Map : 73
-Operation per mili second SkipList : 280 o/ms
-Operation per mili second HashMap : 1232 o/ms
---- PASS: TestCompareInsert (0.39s)
-=== RUN   TestCompareSearch
+Time taken for SkipList: 155 , height : 10 
+Time taken for Map : 68
+Operation per mili second SkipList : 580 o/ms
+Operation per mili second HashMap : 1323 o/ms
 -------------Time benchamrk for Search against map----------
-Time taken for SkipList: 23  height 16 , 
-Time taken for Map : 11
-Operation per mili second SkipList : 3913 o/ms
-Operation per mili second HashMap : 8181 o/ms
---- PASS: TestCompareSearch (0.41s)
+Time taken for SkipList: 19  height 7 , 
+Time taken for Map : 2
+Operation per mili second SkipList : 4736 o/ms
+Operation per mili second HashMap : 45000 o/ms
 ```
 
 ## TODO

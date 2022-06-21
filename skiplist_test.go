@@ -20,6 +20,19 @@ func generateRandomNumber(low int, high int, count int) chan int {
 	return ret
 }
 
+func getStaticArray() chan int {
+	ret := make(chan int)
+	arr := []int{5, 9, 8, 6, 1, 2, 3, 4, 4, 2, 5, 10}
+	go func() {
+		for i := 0; i < len(arr); i++ {
+			ret <- arr[i]
+		}
+		close(ret)
+	}()
+
+	return ret
+}
+
 func getElapsed(call func()) int64 {
 	now := time.Now().UnixMilli()
 	ch := make(chan bool)
@@ -36,14 +49,18 @@ func TestInsert(t *testing.T) {
 	total := 30000
 	list := CreateSkipList(int8(math.Log2(float64(total))))
 	for num := range generateRandomNumber(0, 100, total) {
-		list.Insert(int64(num), []byte(fmt.Sprintf("value - %d", num)))
+		data := []byte(fmt.Sprintf("value - %d", num))
+		list.Insert(int64(num), &data)
 	}
-	count := 0
-	for range list.Iterate() {
-		count++
-	}
-	if count != total {
-		t.Errorf(`Total count not same`)
+
+	value := -1
+	for v := range list.Iterate() {
+		if value <= int(v.key) {
+			value = int(v.key)
+		} else {
+			t.Errorf(`Order for insertion is wrong`)
+			break
+		}
 	}
 }
 
@@ -52,7 +69,8 @@ func TestDelete(t *testing.T) {
 	total := 30000
 	list := CreateSkipList(int8(math.Log2(float64(total))))
 	for num := range generateRandomNumber(0, 100, total) {
-		list.Insert(int64(num), []byte(fmt.Sprintf("value - %d", num)))
+		data := []byte(fmt.Sprintf("value - %d", num))
+		list.Insert(int64(num), &data)
 		list.Delete(int64(num))
 	}
 
@@ -65,31 +83,66 @@ func TestSearch(t *testing.T) {
 	total := 30000
 	list := CreateSkipList(int8(math.Log2(float64(total))))
 	for num := range generateRandomNumber(200, 300, total) {
-		list.Insert(int64(num), []byte(fmt.Sprintf("value - %d", num)))
+		data := []byte(fmt.Sprintf("value - %d", num))
+		list.Insert(int64(num), &data)
 
 	}
 	testText := "I am 21"
-	list.Insert(21, []byte(testText))
+	data := []byte(testText)
+	list.Insert(21, &data)
 	found, value := list.Search(21)
-	if !found || string(value) != testText {
+	if !found || string(*value) != testText {
 		t.Errorf("List Deletion failed")
+	}
+}
+
+func TestSize(t *testing.T) {
+	list := CreateSkipList(4)
+	total := 16
+	numbers := make(map[int]bool, total)
+	count := 0
+	for num := range getStaticArray() {
+		data := []byte(fmt.Sprintf("value - %d - %d", num, count))
+		list.Insert(int64(num), &data)
+		numbers[num] = true
+		count++
+		// fmt.Println(list.Stringify(true))
+	}
+
+	if int(list.Size()) != len(numbers) {
+		t.Errorf("List size is incorrect after insertion %d", list.Size())
+	}
+
+	fmt.Println("-------------")
+
+	for k, _ := range numbers {
+		// fmt.Println(k)
+		list.Delete(int64(k))
+		// fmt.Println(list.Stringify(true))
+	}
+
+	if list.Size() != 0 {
+		// fmt.Println(list.Stringify(true))
+		t.Errorf("List size is incorrect after deletion %d", list.Size())
 	}
 }
 
 func TestCompareInsert(t *testing.T) {
 
-	hashMap := make(map[int64][]byte)
+	hashMap := make(map[int64]*[]byte)
 	total := 90000
 	list := CreateSkipList(int8(math.Log2(float64(total))))
 	timeForList := getElapsed(func() {
 		for num := range generateRandomNumber(200, 300, total) {
-			list.Insert(int64(num), []byte(fmt.Sprintf("value - %d", num)))
+			data := []byte(fmt.Sprintf("value - %d", num))
+			list.Insert(int64(num), &data)
 		}
 	})
 
 	timeForMap := getElapsed(func() {
 		for num := range generateRandomNumber(200, 300, total) {
-			hashMap[int64(num)] = []byte(fmt.Sprintf("value - %d", num))
+			data := []byte(fmt.Sprintf("value - %d", num))
+			hashMap[int64(num)] = &data
 		}
 	})
 	fmt.Printf("-------------Time benchamrk for Insertion against map----------\n")
@@ -102,14 +155,15 @@ func TestCompareInsert(t *testing.T) {
 
 func TestCompareSearch(t *testing.T) {
 
-	hashMap := make(map[int64][]byte)
+	hashMap := make(map[int64]*[]byte)
 	total := 90000
 	list := CreateSkipList(int8(math.Log2(float64(total))))
 	numbers := make([]int, total)
 	i := 0
 	for num := range generateRandomNumber(200, 300, total) {
-		list.Insert(int64(num), []byte(fmt.Sprintf("value - %d", num)))
-		hashMap[int64(num)] = []byte(fmt.Sprintf("value - %d", num))
+		data := []byte(fmt.Sprintf("value - %d", num))
+		list.Insert(int64(num), &data)
+		hashMap[int64(num)] = &data
 		numbers[i] = num
 		i++
 	}

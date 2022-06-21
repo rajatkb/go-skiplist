@@ -1,6 +1,8 @@
 package goskiplist
 
 import (
+	"bytes"
+	"fmt"
 	"math"
 	"math/rand"
 )
@@ -8,9 +10,9 @@ import (
 // Data node use for holding key value pair & the skip nodes if any
 type DataNode struct {
 	key           int64
-	data          []byte
+	data          *[]byte
 	maxLevel      int8
-	skipNodesNext *[]*DataNode
+	skipNodesNext []*DataNode
 }
 
 func (node DataNode) supportLevel(level int) bool {
@@ -18,20 +20,19 @@ func (node DataNode) supportLevel(level int) bool {
 }
 
 func (node DataNode) getNext(level int) *DataNode {
-	return (*node.skipNodesNext)[level]
+	return (node.skipNodesNext)[level]
 }
 
 func (node DataNode) setNext(level int, value *DataNode) {
-	(*node.skipNodesNext)[level] = value
+	(node.skipNodesNext)[level] = value
 }
 
 type SkipList struct {
 	headList      []*DataNode
 	currentHeight int8
 	maxHeight     int8
+	size          int64
 }
-
-func empytyFunc(d *DataNode, height int) {}
 
 /*
 	random level , simulates coin flip and generates level count till max lavel
@@ -49,17 +50,21 @@ func (list SkipList) getRandomLevel() int8 {
 	- useful for search
 	- useful for insertion
 	- useful for deletion
+
+	Concurrency solution
+
+
 */
-func (list *SkipList) traverseList(returnPath bool, shortCircuit bool, key int64, call func(*DataNode, int)) (*[]*[]*DataNode, *DataNode) {
+func (list *SkipList) traverseList(returnPath bool, shortCircuit bool, key int64) ([]([]*DataNode), *DataNode) {
 	currentExploringHeight := int(list.currentHeight - 1)
 	var currentNode *DataNode
 
-	skipPointerList := &list.headList
+	skipPointerList := list.headList
 
-	var pendingOperations []*([]*DataNode) = nil
+	var pendingOperations []([]*DataNode) = nil
 
 	if returnPath {
-		pendingOperations = make([]*([]*DataNode), list.currentHeight)
+		pendingOperations = make([]([]*DataNode), list.currentHeight)
 	}
 
 	tempDataNode := &DataNode{
@@ -84,22 +89,20 @@ func (list *SkipList) traverseList(returnPath bool, shortCircuit bool, key int64
 		if shortCircuit && currentNode.getNext(currentExploringHeight) != nil && currentNode.getNext(currentExploringHeight).key == key {
 			return nil, currentNode.getNext(currentExploringHeight)
 		}
+
 		if returnPath {
-			pendingOperations[currentExploringHeight] = skipPointerList
+			pendingOperations[currentExploringHeight] = currentNode.skipNodesNext
 		}
-
-		call(currentNode, currentExploringHeight)
-
-		// short circuit if the node is same
 
 		currentExploringHeight--
 
 		skipPointerList = currentNode.skipNodesNext
+
 	}
 	if pendingOperations == nil {
 		return nil, currentNode
 	}
-	return &pendingOperations, currentNode
+	return pendingOperations, currentNode
 }
 
 /*
@@ -107,24 +110,23 @@ func (list *SkipList) traverseList(returnPath bool, shortCircuit bool, key int64
 */
 func (list *SkipList) Delete(key int64) bool {
 
-	pendingOperations, currentNode := list.traverseList(true, false, key, empytyFunc)
+	pendingOperations, foundNode := list.traverseList(true, false, key)
 
-	if currentNode.getNext(0) != nil && currentNode.getNext(0).key == key {
+	if foundNode.getNext(0) != nil && foundNode.getNext(0).key == key && pendingOperations != nil {
 		tempNode := &DataNode{}
 		for i := int(list.currentHeight) - 1; i >= 0; i-- {
-
-			if pendingOperations != nil {
-				tempNode.skipNodesNext = (*pendingOperations)[i]
-				currentNode := tempNode
-				if currentNode.getNext(i) != nil && currentNode.getNext(i).supportLevel(i) {
-					if currentNode.getNext(i).supportLevel(i) {
-						currentNode.setNext(i, currentNode.getNext(i).getNext(i))
-					} else {
-						currentNode.setNext(i, nil)
-					}
+			// TODO pull outside
+			tempNode.skipNodesNext = pendingOperations[i]
+			currentNode := tempNode
+			if currentNode.getNext(i) != nil {
+				if currentNode.getNext(i).supportLevel(i) && currentNode.getNext(i).key == key {
+					currentNode.setNext(i, currentNode.getNext(i).getNext(i))
 				}
 			}
+
 		}
+		list.size--
+
 		return true
 	}
 
@@ -134,8 +136,8 @@ func (list *SkipList) Delete(key int64) bool {
 /*
 	Search a key
 */
-func (list SkipList) Search(key int64) (bool, []byte) {
-	_, currentNode := list.traverseList(false, true, key, empytyFunc)
+func (list SkipList) Search(key int64) (bool, *[]byte) {
+	_, currentNode := list.traverseList(false, true, key)
 	if currentNode != nil && currentNode.key == key {
 		return true, currentNode.data
 	}
@@ -145,55 +147,70 @@ func (list SkipList) Search(key int64) (bool, []byte) {
 /*
 	Insert a key
 */
-func (list *SkipList) Insert(key int64, value []byte) *DataNode {
+func (list *SkipList) Insert(key int64, value *[]byte) *DataNode {
 
 	level := list.getRandomLevel()
 
 	if list.headList[0] == nil {
-		arr := make([]*DataNode, level)
 		newNode := &DataNode{
 			key:           key,
 			data:          value,
 			maxLevel:      level,
-			skipNodesNext: &arr,
+			skipNodesNext: make([]*DataNode, level),
 		}
 
 		list.currentHeight = level
 		for i := 0; i < int(level); i++ {
 			list.headList[i] = newNode
 		}
+		list.size++
 		return list.headList[0]
 	}
 
-	arr := make([]*DataNode, level)
 	newNode := &DataNode{
 		key:           key,
 		data:          value,
-		skipNodesNext: &arr,
+		skipNodesNext: make([]*DataNode, level),
 		maxLevel:      level,
 	}
 
-	list.traverseList(false, false, key, func(currentNode *DataNode, currentHeight int) {
-		if currentNode != nil && newNode.supportLevel(currentHeight) {
-			newNode.setNext(currentHeight, currentNode.getNext(currentHeight))
-			currentNode.setNext(currentHeight, newNode)
-		}
-	})
+	pathToProcess, foundNode := list.traverseList(true, true, key)
+
+	if foundNode != nil && foundNode.key == key {
+		foundNode.data = value // just change the data for whatever already existed
+		return foundNode       // if shortcircuit worked we will get an existing node
+	}
+
+	if pathToProcess == nil {
+		return nil
+	}
 
 	prevHeight := list.currentHeight
+
+	tempNode := &DataNode{}
+
+	for i := int(prevHeight) - 1; i >= 0; i-- {
+		tempNode.skipNodesNext = (pathToProcess)[i]
+		if newNode.supportLevel(i) {
+			newNode.setNext(i, tempNode.getNext(i))
+			tempNode.setNext(i, newNode)
+		}
+	}
+
 	list.currentHeight = int8(math.Max(float64(level), float64(list.currentHeight)))
 	if list.currentHeight > prevHeight {
 		for i := list.currentHeight - 1; i > prevHeight-1; i-- {
 			list.headList[i] = newNode
 		}
 	}
-
-	return nil
+	list.size++
+	return newNode
 }
 
 type Pair struct {
 	key   int64
 	value *([]byte)
+	node  *DataNode
 }
 
 func (list SkipList) Iterate() chan Pair {
@@ -201,21 +218,47 @@ func (list SkipList) Iterate() chan Pair {
 	ch := make(chan Pair)
 
 	currentNode := list.headList[0]
-	if currentNode != nil {
-		go func() {
+
+	go func() {
+
+		if currentNode != nil {
 			for currentNode != nil {
-				ch <- Pair{key: currentNode.key, value: &(currentNode.data)}
+				ch <- Pair{key: currentNode.key, value: currentNode.data, node: currentNode}
 				currentNode = currentNode.getNext(0)
 			}
-			close(ch)
-		}()
-	}
+		}
+		close(ch)
+	}()
 
 	return ch
 }
 
 func (list SkipList) IsEmpty() bool {
 	return list.headList[0] == nil
+}
+
+func (list SkipList) Size() int64 {
+	return list.size
+}
+
+func (list SkipList) Stringify(withSkips bool) string {
+	var str bytes.Buffer
+	str.WriteString("[ \n")
+	for v := range list.Iterate() {
+		str.WriteString(fmt.Sprintf("( %d -> %s  ) ", v.key, string(*v.value)))
+		str.WriteString(" SKIP : ")
+		for i := 0; i < int(v.node.maxLevel); i++ {
+			if (v.node.skipNodesNext)[i] != nil {
+				str.WriteString(fmt.Sprintf(" %d ,", (v.node.skipNodesNext)[i].key))
+			} else {
+				str.WriteString(fmt.Sprintf(" nil "))
+			}
+		}
+
+		str.WriteString(" \n")
+	}
+	str.WriteString("] \n")
+	return str.String()
 }
 
 /*
