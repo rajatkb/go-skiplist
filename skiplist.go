@@ -144,6 +144,11 @@ func (list SkipList) Search(key int64) (bool, *[]byte) {
 	return false, nil
 }
 
+// func (list *SkipList) BatchInsert(pairs []Pair) []*DataNode {
+
+// 	return nil
+// }
+
 /*
 	Insert a key
 */
@@ -210,7 +215,6 @@ func (list *SkipList) Insert(key int64, value *[]byte) *DataNode {
 type Pair struct {
 	key   int64
 	value *([]byte)
-	node  *DataNode
 }
 
 func (list SkipList) Iterate() chan Pair {
@@ -223,7 +227,7 @@ func (list SkipList) Iterate() chan Pair {
 
 		if currentNode != nil {
 			for currentNode != nil {
-				ch <- Pair{key: currentNode.key, value: currentNode.data, node: currentNode}
+				ch <- Pair{key: currentNode.key, value: currentNode.data}
 				currentNode = currentNode.getNext(0)
 			}
 		}
@@ -241,15 +245,35 @@ func (list SkipList) Size() int64 {
 	return list.size
 }
 
+func (list SkipList) iterateDataNode() chan *DataNode {
+	type arrayByte = []byte
+	ch := make(chan *DataNode)
+
+	currentNode := list.headList[0]
+
+	go func() {
+
+		if currentNode != nil {
+			for currentNode != nil {
+				ch <- currentNode
+				currentNode = currentNode.getNext(0)
+			}
+		}
+		close(ch)
+	}()
+
+	return ch
+}
+
 func (list SkipList) Stringify(withSkips bool) string {
 	var str bytes.Buffer
 	str.WriteString("[ \n")
-	for v := range list.Iterate() {
-		str.WriteString(fmt.Sprintf("( %d -> %s  ) ", v.key, string(*v.value)))
+	for v := range list.iterateDataNode() {
+		str.WriteString(fmt.Sprintf("( %d -> %s  ) ", v.key, string(*v.data)))
 		str.WriteString(" SKIP : ")
-		for i := 0; i < int(v.node.maxLevel); i++ {
-			if (v.node.skipNodesNext)[i] != nil {
-				str.WriteString(fmt.Sprintf(" %d ,", (v.node.skipNodesNext)[i].key))
+		for i := 0; i < int(v.maxLevel); i++ {
+			if (v.skipNodesNext)[i] != nil {
+				str.WriteString(fmt.Sprintf(" %d ,", v.skipNodesNext[i].key))
 			} else {
 				str.WriteString(fmt.Sprintf(" nil "))
 			}
