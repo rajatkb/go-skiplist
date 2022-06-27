@@ -64,6 +64,42 @@ func TestInsert(t *testing.T) {
 	}
 }
 
+func TestMultiInsert(t *testing.T) {
+
+	total := 30000
+	list := CreateSkipList(int8(math.Log2(float64(total))))
+	pairs := make([]Pair, 2)
+	i := 0
+	elapsed := getElapsed(func() {
+		for num := range generateRandomNumber(0, 100, total) {
+			pairs[i].key = int64(num)
+
+			data := []byte(fmt.Sprintf("value - %d", num))
+			pairs[i].value = &data
+			i++
+			if i == 2 {
+				i = 0
+				list.BatchInsert(pairs)
+			}
+		}
+	})
+
+	value := -1
+	for v := range list.Iterate() {
+		if value <= int(v.key) {
+			value = int(v.key)
+		} else {
+			t.Errorf(`Order for insertion is wrong`)
+			break
+		}
+	}
+
+	fmt.Printf("-------------Time benchamrk for Multi Insertion against map----------\n")
+	fmt.Printf("Time taken for SkipList: %d , height : %d \n", elapsed, list.currentHeight)
+	fmt.Printf("Operation per mili second SkipList : %d o/ms \n", int64(total)/elapsed)
+
+}
+
 func TestDelete(t *testing.T) {
 
 	total := 30000
@@ -112,8 +148,6 @@ func TestSize(t *testing.T) {
 	if int(list.Size()) != len(numbers) {
 		t.Errorf("List size is incorrect after insertion %d", list.Size())
 	}
-
-	fmt.Println("-------------")
 
 	for k, _ := range numbers {
 		// fmt.Println(k)
