@@ -67,24 +67,5 @@ Operation per mili second HashMap : 45000 o/ms
 ```
 
 ## TODO
-
-- Provide Batch Insert / Delete / Search - motivation being while traversing the list a sorted batch will have 
-  beter total time of operation than doing these individually. Motivation is to cutdown the time of traversal
-  ```
-  e.g 
-  list.BatchInsert([6 , 9 , 10])
-
-  1 -> 2 -> 3 -> 4 -> 8 -> 11
-  
-  insert 6
-  search from 1
-  4 -> () -> 8
-
-  insert 9
-  search from 6 or 4 based on previous top node which will need editing
-
-  For larger list such kind of batches should reduce average complexity
-  of insertion
-
-  ```
+- Add Batch Search , maybe a Delete also
 - Look into Compare and Swap implementation for SkipList , incorporate the same for thread safe version

@@ -149,9 +149,11 @@ func (list SkipList) Search(key int64) (bool, *[]byte) {
 }
 
 /*
- WORK IN PROGRESS
+	Requires an Ordered set of data. Otherwise SkipList will break
+	Uses the ordered pairs to skip large section of this list after
+	the first insert. Improves insertion performance by 30%
 */
-func (list *SkipList) BatchOrderedInsert(pairs []Pair) []*DataNode {
+func (list *SkipList) BatchOrderedInsert(pairs []Pair) {
 
 	level := list.getRandomLevel()
 	start := 0
@@ -204,7 +206,6 @@ func (list *SkipList) BatchOrderedInsert(pairs []Pair) []*DataNode {
 		list.size++
 	}
 
-	return nil
 }
 
 /*
