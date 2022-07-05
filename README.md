@@ -31,10 +31,19 @@ In case you plan on using the API. 😵
 ```
 - IsEmpty
 
-```golang
+```go
     isEmpty := list.IsEmpty()
 ```
 
+```go
+// experimental
+// requirs an ordered slice of pairs
+// imporeves insert performance on avg by 33%
+// 
+    var pairs []skiplist.Pair
+    list.BatchOrderedInsert(pairs)
+
+```
 
 ## Test
 
@@ -42,15 +51,18 @@ It's slow. Painfully slow. But it's ordered 🤣. Benchmarks based on logarithmi
 of total entries. Posted results are the best of 5 consequtive runs.
 
 ```
+-------------Time benchamrk for Multi Insertion against map----------
+Time taken for SkipList: 30 ms, height : 14 
+Operation per mili second SkipList : 1000 o/ms
 -------------Time benchamrk for Insertion against map----------
-Time taken for SkipList: 155 , height : 10 
-Time taken for Map : 68
-Operation per mili second SkipList : 580 o/ms
-Operation per mili second HashMap : 1323 o/ms
+Time taken for SkipList: 110 , height : 7 
+Time taken for Map : 60
+Operation per mili second SkipList : 818 o/ms
+Operation per mili second HashMap : 1500 o/ms
 -------------Time benchamrk for Search against map----------
-Time taken for SkipList: 19  height 7 , 
+Time taken for SkipList: 17  height 7 , 
 Time taken for Map : 2
-Operation per mili second SkipList : 4736 o/ms
+Operation per mili second SkipList : 5294 o/ms
 Operation per mili second HashMap : 45000 o/ms
 ```
 

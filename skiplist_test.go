@@ -3,35 +3,9 @@ package goskiplist
 import (
 	"fmt"
 	"math"
-	"math/rand"
 	"testing"
 	"time"
 )
-
-func generateRandomNumber(low int, high int, count int) chan int {
-	ret := make(chan int)
-	go func() {
-		for i := 0; i < count; i++ {
-			ret <- int(rand.Float64()*(float64(high)-float64(low)) + float64(low))
-		}
-		close(ret)
-	}()
-
-	return ret
-}
-
-func getStaticArray() chan int {
-	ret := make(chan int)
-	arr := []int{5, 9, 8, 6, 1, 2, 3, 4, 4, 2, 5, 10}
-	go func() {
-		for i := 0; i < len(arr); i++ {
-			ret <- arr[i]
-		}
-		close(ret)
-	}()
-
-	return ret
-}
 
 func getElapsed(call func()) int64 {
 	now := time.Now().UnixMilli()
@@ -68,18 +42,19 @@ func TestMultiInsert(t *testing.T) {
 
 	total := 30000
 	list := CreateSkipList(int8(math.Log2(float64(total))))
-	pairs := make([]Pair, 2)
+	batchSize := 100
+	pairs := make([]Pair, batchSize)
 	i := 0
 	elapsed := getElapsed(func() {
-		for num := range generateRandomNumber(0, 100, total) {
+		for num := range generateIncreasingNumbers(1, total) {
 			pairs[i].key = int64(num)
 
 			data := []byte(fmt.Sprintf("value - %d", num))
 			pairs[i].value = &data
 			i++
-			if i == 2 {
+			if i == batchSize {
 				i = 0
-				list.BatchInsert(pairs)
+				list.BatchOrderedInsert(pairs)
 			}
 		}
 	})
@@ -94,8 +69,10 @@ func TestMultiInsert(t *testing.T) {
 		}
 	}
 
+	elapsed = int64(math.Max(float64(elapsed), 1.0))
+
 	fmt.Printf("-------------Time benchamrk for Multi Insertion against map----------\n")
-	fmt.Printf("Time taken for SkipList: %d , height : %d \n", elapsed, list.currentHeight)
+	fmt.Printf("Time taken for SkipList: %d ms, height : %d \n", elapsed, list.currentHeight)
 	fmt.Printf("Operation per mili second SkipList : %d o/ms \n", int64(total)/elapsed)
 
 }
