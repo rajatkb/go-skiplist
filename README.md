@@ -35,6 +35,8 @@ In case you plan on using the API. 😵
     isEmpty := list.IsEmpty()
 ```
 
+- BatchOrderedInsert
+
 ```go
 // experimental
 // requirs an ordered slice of pairs
