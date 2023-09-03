@@ -2,13 +2,15 @@
 Skip List implementation in Golang. 
 
 
-## API
-
-In case you plan on using the API. 😵
 
 ### Highlights
 - Completely for in memory use case.
 - Generic supported implementation
+
+
+## API
+
+In case you plan on using the API. 😵
 
 - Insert
 
