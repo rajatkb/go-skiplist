@@ -16,7 +16,7 @@ func getStaticArray() chan int {
 }
 
 func generateIncreasingNumbers(low int, high int) chan int {
-	ret := make(chan int)
+	ret := make(chan int, high-low+1)
 
 	go func() {
 		for i := low; i <= high; i++ {
@@ -29,7 +29,7 @@ func generateIncreasingNumbers(low int, high int) chan int {
 }
 
 func generateRandomNumber(low int, high int, count int) chan int {
-	ret := make(chan int)
+	ret := make(chan int, count)
 	go func() {
 		for i := 0; i < count; i++ {
 			ret <- int(rand.Float64()*(float64(high)-float64(low)) + float64(low))

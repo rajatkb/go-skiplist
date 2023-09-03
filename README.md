@@ -69,5 +69,7 @@ Operation per mili second HashMap : 45000 o/ms
 ```
 
 ## TODO
-- Add Batch Search , maybe a Delete also
+- Add Batched Search , maybe a Delete also
+- Add Range Scan operation 
 - Look into Compare and Swap implementation for SkipList , incorporate the same for thread safe version
+

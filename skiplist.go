@@ -8,36 +8,36 @@ import (
 )
 
 // Data node use for holding key value pair & the skip nodes if any
-type DataNode struct {
+type DataNode[Dt any] struct {
 	key           int64
-	data          *[]byte
+	data          Dt
 	maxLevel      int8
-	skipNodesNext []*DataNode
+	skipNodesNext []*DataNode[Dt]
 }
 
-func (node DataNode) supportLevel(level int) bool {
+func (node DataNode[Dt]) supportLevel(level int) bool {
 	return int(node.maxLevel) > level
 }
 
-func (node DataNode) getNext(level int) *DataNode {
+func (node DataNode[Dt]) getNext(level int) *DataNode[Dt] {
 	return (node.skipNodesNext)[level]
 }
 
-func (node DataNode) setNext(level int, value *DataNode) {
+func (node DataNode[Dt]) setNext(level int, value *DataNode[Dt]) {
 	(node.skipNodesNext)[level] = value
 }
 
-type SkipList struct {
-	headList      []*DataNode
-	currentHeight int8
-	maxHeight     int8
-	size          int64
+type SkipListImpl[Dt any] struct {
+	headList      []*DataNode[Dt] // current head of the list
+	currentHeight int8            // current max heigth the Skip List has reached
+	maxHeight     int8            // max height allowed for this list
+	size          int64           // current size
 }
 
 /*
-	random level , simulates coin flip and generates level count till max lavel
+random level , simulates coin flip and generates level count till max lavel
 */
-func (list SkipList) getRandomLevel() int8 {
+func (list SkipListImpl[Dt]) getRandomLevel() int8 {
 	count := int8(1)
 	for rand.Float32() > 0.5 && count < list.maxHeight {
 		count++
@@ -46,32 +46,30 @@ func (list SkipList) getRandomLevel() int8 {
 }
 
 /*
-	traverses list to find an entry right before the key
-	- useful for search
-	- useful for insertion
-	- useful for deletion
+traverses list to find an entry right before the key
+- useful for search
+- useful for insertion
+- useful for deletion
 
-	Concurrency solution
-
-
+Concurrency solution
 */
-func (list *SkipList) traverseList(returnPath bool, shortCircuit bool, key int64, startHeight int, seedPendingOperation []([]*DataNode)) ([]([]*DataNode), *DataNode) {
+func (list *SkipListImpl[Dt]) traverseList(returnPath bool, shortCircuit bool, key int64, startHeight int, seedPendingOperation []([]*DataNode[Dt])) ([]([]*DataNode[Dt]), *DataNode[Dt]) {
 	currentExploringHeight := startHeight
-	var currentNode *DataNode
+	var currentNode *DataNode[Dt]
 
-	var pendingOperations []([]*DataNode) = seedPendingOperation
+	var pendingOperations []([]*DataNode[Dt]) = seedPendingOperation
 
-	var skipPointerList []*DataNode = list.headList
+	var skipPointerList []*DataNode[Dt] = list.headList
 
 	if pendingOperations != nil {
 		skipPointerList = pendingOperations[startHeight]
 	}
 
 	if returnPath && seedPendingOperation == nil {
-		pendingOperations = make([]([]*DataNode), list.currentHeight)
+		pendingOperations = make([]([]*DataNode[Dt]), list.currentHeight)
 	}
 
-	tempDataNode := &DataNode{
+	tempDataNode := &DataNode[Dt]{
 		skipNodesNext: skipPointerList,
 	}
 
@@ -110,14 +108,14 @@ func (list *SkipList) traverseList(returnPath bool, shortCircuit bool, key int64
 }
 
 /*
-	Deletes a key
+Deletes a key
 */
-func (list *SkipList) Delete(key int64) bool {
+func (list *SkipListImpl[Dt]) Delete(key int64) bool {
 
 	pendingOperations, foundNode := list.traverseList(true, false, key, int(list.currentHeight-1), nil)
 
 	if foundNode.getNext(0) != nil && foundNode.getNext(0).key == key && pendingOperations != nil {
-		tempNode := &DataNode{}
+		tempNode := &DataNode[Dt]{}
 		for i := int(list.currentHeight) - 1; i >= 0; i-- {
 			// TODO pull outside
 			tempNode.skipNodesNext = pendingOperations[i]
@@ -138,22 +136,24 @@ func (list *SkipList) Delete(key int64) bool {
 }
 
 /*
-	Search a key
+Search a key
 */
-func (list SkipList) Search(key int64) (bool, *[]byte) {
+func (list SkipListImpl[Dt]) Search(key int64) (bool, Dt) {
 	_, currentNode := list.traverseList(false, true, key, int(list.currentHeight-1), nil)
 	if currentNode != nil && currentNode.key == key {
 		return true, currentNode.data
 	}
-	return false, nil
+
+	var value Dt
+	return false, value
 }
 
 /*
-	Requires an Ordered set of data. Otherwise SkipList will break
-	Uses the ordered pairs to skip large section of this list after
-	the first insert. Improves insertion performance by 30%
+Requires an Ordered set of data. Otherwise SkipList will break
+Uses the ordered pairs to skip large section of this list after
+the first insert. Improves insertion performance by 30%
 */
-func (list *SkipList) BatchOrderedInsert(pairs []Pair) {
+func (list *SkipListImpl[Dt]) BatchOrderedInsert(pairs []Pair[Dt]) {
 
 	level := list.getRandomLevel()
 	start := 0
@@ -162,7 +162,7 @@ func (list *SkipList) BatchOrderedInsert(pairs []Pair) {
 		start = 1
 	}
 
-	var startSkipList [][]*DataNode
+	var startSkipList [][]*DataNode[Dt]
 
 	for i := start; i < len(pairs); i++ {
 		pair := pairs[i]
@@ -174,14 +174,14 @@ func (list *SkipList) BatchOrderedInsert(pairs []Pair) {
 			foundNode.data = pair.value // just change the data for whatever already existed
 			continue                    // if shortcircuit worked we will get an existing node
 		}
-		tempNode := &DataNode{}
+		tempNode := &DataNode[Dt]{}
 
 		startSkipList = pathToProcess
 
-		newNode := &DataNode{
+		newNode := &DataNode[Dt]{
 			key:           pair.key,
 			data:          pair.value,
-			skipNodesNext: make([]*DataNode, level),
+			skipNodesNext: make([]*DataNode[Dt], level),
 			maxLevel:      level,
 		}
 
@@ -197,7 +197,7 @@ func (list *SkipList) BatchOrderedInsert(pairs []Pair) {
 		prevHeight := list.currentHeight
 		list.currentHeight = int8(math.Max(float64(level), float64(list.currentHeight)))
 		if list.currentHeight > prevHeight {
-			startSkipList = append(startSkipList, make([][]*DataNode, list.currentHeight-prevHeight)...)
+			startSkipList = append(startSkipList, make([][]*DataNode[Dt], list.currentHeight-prevHeight)...)
 			for i := list.currentHeight - 1; i > prevHeight-1; i-- {
 				list.headList[i] = newNode
 				startSkipList[i] = newNode.skipNodesNext
@@ -209,9 +209,9 @@ func (list *SkipList) BatchOrderedInsert(pairs []Pair) {
 }
 
 /*
-	Insert a key
+Insert a key
 */
-func (list *SkipList) Insert(key int64, value *[]byte) *DataNode {
+func (list *SkipListImpl[Dt]) Insert(key int64, value Dt) *DataNode[Dt] {
 
 	level := list.getRandomLevel()
 
@@ -220,10 +220,10 @@ func (list *SkipList) Insert(key int64, value *[]byte) *DataNode {
 		return returnValue
 	}
 
-	newNode := &DataNode{
+	newNode := &DataNode[Dt]{
 		key:           key,
 		data:          value,
-		skipNodesNext: make([]*DataNode, level),
+		skipNodesNext: make([]*DataNode[Dt], level),
 		maxLevel:      level,
 	}
 
@@ -236,7 +236,7 @@ func (list *SkipList) Insert(key int64, value *[]byte) *DataNode {
 
 	prevHeight := list.currentHeight
 
-	tempNode := &DataNode{}
+	tempNode := &DataNode[Dt]{}
 
 	for i := int(prevHeight) - 1; i >= 0; i-- {
 		tempNode.skipNodesNext = (pathToProcess)[i]
@@ -256,13 +256,13 @@ func (list *SkipList) Insert(key int64, value *[]byte) *DataNode {
 	return newNode
 }
 
-func (list *SkipList) checkCurrentHead(key int64, value *[]byte, level int8) (bool, *DataNode) {
+func (list *SkipListImpl[Dt]) checkCurrentHead(key int64, value Dt, level int8) (bool, *DataNode[Dt]) {
 	if list.headList[0] == nil {
-		newNode := &DataNode{
+		newNode := &DataNode[Dt]{
 			key:           key,
 			data:          value,
 			maxLevel:      level,
-			skipNodesNext: make([]*DataNode, level),
+			skipNodesNext: make([]*DataNode[Dt], level),
 		}
 
 		list.currentHeight = level
@@ -275,14 +275,14 @@ func (list *SkipList) checkCurrentHead(key int64, value *[]byte, level int8) (bo
 	return false, nil
 }
 
-type Pair struct {
+type Pair[Dt any] struct {
 	key   int64
-	value *([]byte)
+	value Dt
 }
 
-func (list SkipList) Iterate() chan Pair {
-	type arrayByte = []byte
-	ch := make(chan Pair)
+func (list SkipListImpl[Dt]) Iterate() chan Pair[Dt] {
+
+	ch := make(chan Pair[Dt])
 
 	currentNode := list.headList[0]
 
@@ -290,7 +290,7 @@ func (list SkipList) Iterate() chan Pair {
 
 		if currentNode != nil {
 			for currentNode != nil {
-				ch <- Pair{key: currentNode.key, value: currentNode.data}
+				ch <- Pair[Dt]{key: currentNode.key, value: currentNode.data}
 				currentNode = currentNode.getNext(0)
 			}
 		}
@@ -300,17 +300,21 @@ func (list SkipList) Iterate() chan Pair {
 	return ch
 }
 
-func (list SkipList) IsEmpty() bool {
+func (list SkipListImpl[Dt]) IsEmpty() bool {
 	return list.headList[0] == nil
 }
 
-func (list SkipList) Size() int64 {
+func (list SkipListImpl[Dt]) Size() int64 {
 	return list.size
 }
 
-func (list SkipList) iterateDataNode() chan *DataNode {
-	type arrayByte = []byte
-	ch := make(chan *DataNode)
+func (list SkipListImpl[Dt]) CurrentMaxHeight() int8 {
+	return list.currentHeight
+}
+
+func (list SkipListImpl[Dt]) iterateDataNode() chan *DataNode[Dt] {
+
+	ch := make(chan *DataNode[Dt])
 
 	currentNode := list.headList[0]
 
@@ -328,11 +332,14 @@ func (list SkipList) iterateDataNode() chan *DataNode {
 	return ch
 }
 
-func (list SkipList) Stringify(withSkips bool) string {
+/*
+used only in debug purposes
+*/
+func (list SkipListImpl[Dt]) stringify(withSkips bool) string {
 	var str bytes.Buffer
 	str.WriteString("[ \n")
 	for v := range list.iterateDataNode() {
-		str.WriteString(fmt.Sprintf("( %d -> %s  ) ", v.key, string(*v.data)))
+		str.WriteString(fmt.Sprintf("( %d -> %s  ) ", v.key, fmt.Sprint(v.data)))
 		str.WriteString(" SKIP : ")
 		for i := 0; i < int(v.maxLevel); i++ {
 			if (v.skipNodesNext)[i] != nil {
@@ -341,7 +348,6 @@ func (list SkipList) Stringify(withSkips bool) string {
 				str.WriteString(fmt.Sprintf(" nil "))
 			}
 		}
-
 		str.WriteString(" \n")
 	}
 	str.WriteString("] \n")
@@ -349,11 +355,11 @@ func (list SkipList) Stringify(withSkips bool) string {
 }
 
 /*
-	Creates a skip list for the specified height
+Creates a skip list for the specified height
 */
-func CreateSkipList(maxHeight int8) *SkipList {
-	return &SkipList{
-		headList:      make([]*DataNode, maxHeight),
+func CreateSkipList[Dt any](maxHeight int8) SkipList[Dt] {
+	return &SkipListImpl[Dt]{
+		headList:      make([]*DataNode[Dt], maxHeight),
 		maxHeight:     maxHeight,
 		currentHeight: 0,
 	}
