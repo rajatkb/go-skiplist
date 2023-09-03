@@ -1,10 +1,14 @@
 # go-skiplist
-Skip List implementation in Golang. I came across the idea and wanted to try out and implementatin for same. It's work in progress the operations 
-per second needs work
+Skip List implementation in Golang. 
+
 
 ## API
 
 In case you plan on using the API. 😵
+
+### Highlights
+- Completely for in memory use case.
+- Generic supported implementation
 
 - Insert
 
@@ -50,26 +54,34 @@ In case you plan on using the API. 😵
 ## Test
 
 It's slow. Painfully slow. But it's ordered 🤣. Benchmarks based on logarithmic height
-of total entries. Posted results are the best of 5 consequtive runs.
+of total entries. posted results are consistently reproducible on a Ryzen 5600x machine with virtualized 2 Core + 4Gb in WSL 
 
 ```
--------------Time benchamrk for Multi Insertion against map----------
-Time taken for SkipList: 30 ms, height : 14 
-Operation per mili second SkipList : 1000 o/ms
+=== RUN   TestCompareInsert
 -------------Time benchamrk for Insertion against map----------
-Time taken for SkipList: 110 , height : 7 
-Time taken for Map : 60
-Operation per mili second SkipList : 818 o/ms
-Operation per mili second HashMap : 1500 o/ms
+Time taken for SkipList: 76 , height : 16
+Time taken for Map : 25
+Operation per mili second SkipList : 1184 o/ms
+Operation per mili second HashMap : 3600 o/ms
+--- PASS: TestCompareInsert (0.10s)
+=== RUN   TestCompareSearch
 -------------Time benchamrk for Search against map----------
-Time taken for SkipList: 17  height 7 , 
-Time taken for Map : 2
-Operation per mili second SkipList : 5294 o/ms
-Operation per mili second HashMap : 45000 o/ms
+Time taken for SkipList: 29  height 16 ,
+Time taken for Map : 3
+Operation per mili second SkipList : 3103 o/ms
+Operation per mili second HashMap : 30000 o/ms
+--- PASS: TestCompareSearch (0.12s)
+=== RUN   TestMultiInsert
+-------------Time benchamrk for Multi Insertion against map----------
+Time taken for SkipList: 51 ms, height : 16
+Operation per mili second SkipList : 1764 o/ms , @ batch size : 500
+--- PASS: TestMultiInsert (0.06s)
 ```
 
 ## TODO
-- Add Batched Search , maybe a Delete also
+- Add Batched Search and Delete also
 - Add Range Scan operation 
+- Add Batched Multi Operation support
+- Add Doubly Linked List supports and Lookup from Tail to optimize for Long Range Scans
 - Look into Compare and Swap implementation for SkipList , incorporate the same for thread safe version
 
